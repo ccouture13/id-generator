@@ -5,13 +5,14 @@ import random
 from datetime import datetime, timedelta, timezone
 import json
 import numpy as np
+import uuid
 
 # Load configuration
 config_path = os.path.join(os.path.dirname(__file__), 'config.json')
 with open(config_path, 'r') as config_file:
     config = json.load(config_file)
 
-#Constants
+# Constants
 FIRST_NAMES = [
     "James", "John", "Robert", "Michael", "William", "David", "Joseph", "Charles", "Thomas", "Daniel",
     "Matthew", "Anthony", "Donald", "Steven", "Paul", "Andrew", "Mark", "George", "Kenneth", "Joshua",
@@ -38,15 +39,13 @@ LAST_NAMES = [
     "Ortiz", "Jenkins", "Gutierrez", "Perry", "Butler", "Barnes", "Fisher", "Henderson", "Coleman", "Simmons",
     "Patterson", "Jordan", "Reynolds", "Hamilton", "Graham", "Kim"
 ]
-EVENT_TYPES = ['page_view', 'click', 'form_submit', 'video_play', 'social_share']
+
+EVENT_TYPES = ['bought_insurance']
 PROPERTIES = {
-    'source': ['search_engine', 'social_media', 'email_campaign', 'direct'],
-    'medium': ['organic', 'cpc', 'email', 'referral'],
-    'article_content': ['news', 'tutorial', 'review', 'opinion'],
-    'interaction_type': ['read', 'like', 'comment', 'share']
+    'value': lambda: round(random.uniform(120, 350), 2),
 }
 
-#Counts & invalidity percentages.
+# Counts & invalidity percentages
 COUNT = config["COUNT"]
 MAX_INVALID_PERCENTAGE = config["MAX_INVALID_PERCENTAGE"]
 MAX_EMPTY_PERCENTAGE = config["MAX_EMPTY_PERCENTAGE"]
@@ -55,7 +54,7 @@ MAX_EMPTY_PERCENTAGE = config["MAX_EMPTY_PERCENTAGE"]
 def generate_random_value(choices, include_empty=False, max_empty_percentage=MAX_EMPTY_PERCENTAGE):
     if include_empty and random.random() < max_empty_percentage:
         return ""
-    return random.choice(choices)
+    return choices() if callable(choices) else random.choice(choices)
 
 def generate_event_timestamp():
     if random.random() < MAX_INVALID_PERCENTAGE:
@@ -65,7 +64,10 @@ def generate_event_timestamp():
     event_time = now + random_offset
     return int(event_time.timestamp())
 
-def generate_data(count=COUNT, max_invalid_percentage=MAX_INVALID_PERCENTAGE, max_empty_percentage=MAX_EMPTY_PERCENTAGE):
+def generate_random_id():
+    return str(uuid.uuid4())
+
+def generate_data(count=COUNT, max_invalid_percentage=MAX_INVALID_PERCENTAGE, max_empty_percentage=MAX_EMPTY_PERCENTAGE, use_random_id=False):
     data = []
     for _ in range(count):
         is_invalid = random.random() < max_invalid_percentage
@@ -78,18 +80,19 @@ def generate_data(count=COUNT, max_invalid_percentage=MAX_INVALID_PERCENTAGE, ma
         event_type = generate_random_value(EVENT_TYPES, include_empty=is_invalid, max_empty_percentage=max_empty_percentage)
         event_timestamp = generate_event_timestamp()
         
+        # Generate properties dynamically
         row = [
-            hashed_email,
+            generate_random_id() if use_random_id else hashed_email,
             event_type,
             event_timestamp,
-            *[generate_random_value(PROPERTIES[prop], include_empty=True, max_empty_percentage=max_empty_percentage) for prop in ['source', 'medium', 'article_content', 'interaction_type']]
+            *[generate_random_value(PROPERTIES[prop], include_empty=True, max_empty_percentage=max_empty_percentage) for prop in PROPERTIES]
         ]
         data.append(row)
     return data
 
 # Generate and prepare data for DataFrame
-columns = ["id_e", "event_type", "event_timestamp", "prop_source", "prop_medium", "prop_article_content", "prop_interaction_type"]
-df = pd.DataFrame(generate_data(), columns=columns)
+columns = ["id_c6", "event_type", "event_timestamp"] + [f"prop_{prop}" for prop in PROPERTIES]
+df = pd.DataFrame(generate_data(use_random_id=True), columns=columns)
 
 # Define the subdirectory and filename
 subdirectory = 'Outputs/Event Files'

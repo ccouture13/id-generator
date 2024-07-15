@@ -29,12 +29,13 @@ def generate_cli_commands_from_csv(file_path):
     commands = []
     for event_type, properties in event_types.items():
         schema = [
-            {"name": prop, "type": {"kind": "string"}, "bigquery_column_name": prop} 
+            {"bigquery_column_name": prop, "name": prop, "type": {"kind": "string"}} 
             for prop in properties
         ]
         schema_json = json.dumps(schema)
         # Sanitize the event_type to use as the event_schema_id
-        cli_command = f'./optable-cli --timeout=10s event-schema create "{event_type}" "{event_type}" \'{schema_json}\''
+        sanitized_event_type = sanitize_event_type(event_type)
+        cli_command = f'./optable-cli --timeout=10s event-schema create "{sanitized_event_type}" "{event_type}" "{event_type}" \'{schema_json}\''
         commands.append(cli_command)
 
     # Write the commands to a file
@@ -46,6 +47,7 @@ def generate_cli_commands_from_csv(file_path):
 
     print(f"CLI commands written to {output_file}")
 
+# MODIFY THE PATH TO SELECT WHICH EVENT FILE TO USE...
 if __name__ == "__main__":
-    file_path = 'Examples/5K_events_2024-02-02_1211.csv'
+    file_path = 'Outputs/Event Files/5K_events_2024-02-02_1248.csv'
     generate_cli_commands_from_csv(file_path)
